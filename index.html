@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プロンプト帳</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+
+:root {
+  --paper: #efe9da;
+  --paper-card: #fbf8f1;
+  --ink: #2e2a24;
+  --ink-soft: #6b6252;
+  --rule: #c9bfa8;
+  --rule-strong: #b3a789;
+  --accent-business: #35507a;
+  --gold: #b8873a;
+  --danger: #a3403a;
+  --shadow: 0 2px 6px rgba(46, 42, 36, 0.12);
+  --radius: 3px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; background: var(--paper);
+  background-image: linear-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 100% 32px; background-position: 0 78px;
+  color: var(--ink); font-family: 'Zen Kaku Gothic New', sans-serif;
+}
+button { font-family: inherit; cursor: pointer; }
+textarea, input { font-family: inherit; }
+
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+.login-card { background: var(--paper-card); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--shadow); padding: 40px 36px; width: 320px; text-align: center; }
+.login-card h1 { font-family: 'Shippori Mincho', serif; font-size: 24px; margin: 0 0 4px; letter-spacing: 0.08em; }
+.login-card p.tagline { font-size: 12px; color: var(--ink-soft); margin: 0 0 24px; }
+.login-card input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: #fff; font-size: 15px; margin-bottom: 12px; }
+.login-card button { width: 100%; padding: 10px; border: none; border-radius: var(--radius); background: var(--accent-business); color: #fff; font-size: 14px; letter-spacing: 0.05em; }
+.login-card button:hover { filter: brightness(1.1); }
+.login-error { color: var(--danger); font-size: 12px; min-height: 16px; }
+.local-note { font-size: 11px; color: var(--ink-soft); max-width: 280px; text-align: center; line-height: 1.6; }
+
+#app-screen { display: none; min-height: 100vh; }
+#app-screen.active { display: flex; }
+
+.spiral { width: 34px; flex-shrink: 0; background: linear-gradient(90deg, transparent 0 15px, var(--rule-strong) 15px 17px, transparent 17px); display: flex; flex-direction: column; align-items: center; padding-top: 90px; gap: 22px; }
+.spiral span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rule-strong); background: var(--paper); }
+
+.tabs { width: 168px; flex-shrink: 0; padding: 78px 0 20px; display: flex; flex-direction: column; gap: 6px; }
+.tab-btn { border: none; padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 500; color: #fff; border-radius: 0 20px 20px 0; margin-right: 14px; box-shadow: var(--shadow); opacity: 0.72; transition: opacity 0.15s, transform 0.15s; }
+.tab-btn:hover { opacity: 0.9; transform: translateX(2px); }
+.tab-btn.active { opacity: 1; margin-right: 0; transform: translateX(0); }
+.tab-btn.trash-tab { background: var(--ink-soft) !important; margin-top: 18px; }
+.tab-btn.fav-tab { background: var(--gold) !important; }
+.tab-add-row { padding: 10px 14px 0; }
+.tab-add-row button { width: 100%; border: 1px dashed var(--rule-strong); background: transparent; color: var(--ink-soft); border-radius: var(--radius); padding: 8px; font-size: 12px; }
+.tab-add-row button:hover { background: var(--paper-card); }
+
+.main { flex: 1; padding: 40px 48px; max-width: 860px; }
+.main-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+.main-header h2 { font-family: 'Shippori Mincho', serif; font-size: 22px; margin: 0; }
+.header-actions { display: flex; align-items: center; gap: 14px; }
+.lock-btn { border: none; background: transparent; color: var(--ink-soft); font-size: 12px; text-decoration: underline; cursor: pointer; }
+
+.add-new-btn { display: block; width: 100%; text-align: left; background: var(--paper-card); border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 16px; margin-bottom: 28px; color: var(--ink-soft); font-size: 14px; box-shadow: var(--shadow); }
+.add-new-btn:hover { background: #f4f0e2; color: var(--ink); }
+
+.prompt-card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--shadow); position: relative; }
+.prompt-card .card-body { display: flex; gap: 12px; cursor: pointer; }
+.prompt-card .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule-strong); cursor: zoom-in; flex-shrink: 0; }
+.card-text { flex: 1; min-width: 0; }
+.card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.card-title.placeholder { color: var(--ink-soft); font-weight: 500; }
+.card-preview { font-size: 13px; color: var(--ink-soft); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.card-date { font-size: 11px; color: var(--ink-soft); }
+.prompt-card .card-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.icon-btn { border: none; background: transparent; font-size: 13px; color: var(--ink-soft); padding: 4px 6px; border-radius: var(--radius); }
+.icon-btn:hover { background: var(--paper); color: var(--ink); }
+.icon-btn.star.active { color: var(--gold); }
+.icon-btn.copy-flash { color: #3f6b52; }
+.card-meta-spacer { flex: 1; }
+.undo-hint { font-size: 11px; color: var(--accent-business); text-decoration: underline; }
+.empty-state { color: var(--ink-soft); font-size: 13px; padding: 30px 0; text-align: center; }
+
+/* フルスクリーン編集ポップアップ */
+.editor-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.88); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; opacity: 0; visibility: hidden; transition: opacity 0.15s ease; }
+.editor-overlay.active { opacity: 1; visibility: visible; }
+.editor-panel { background: var(--paper-card); width: min(760px, 100%); height: min(680px, 92vh); border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); display: flex; flex-direction: column; padding: 26px; transform: scale(0.92); opacity: 0; transition: transform 0.16s ease, opacity 0.16s ease; }
+.editor-overlay.active .editor-panel { transform: scale(1); opacity: 1; }
+.editor-panel.drag-over { outline: 2px dashed var(--accent-business); outline-offset: -2px; }
+.editor-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+#editor-title { flex: 1; font-size: 20px; font-family: 'Shippori Mincho', serif; border: none; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; background: transparent; outline: none; }
+#editor-close-btn { border: none; background: transparent; font-size: 20px; color: var(--ink-soft); line-height: 1; padding: 4px 8px; }
+#editor-close-btn:hover { color: var(--ink); }
+#editor-text { flex: 1; width: 100%; border: none; resize: none; font-size: 18px; line-height: 1.9; outline: none; background: transparent; }
+.editor-image-area { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 14px; flex-shrink: 0; }
+.paste-hint { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
+.pending-image-preview { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: var(--paper); border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 6px 8px; }
+.pending-image-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius); }
+.pending-image-preview span { font-size: 12px; color: var(--ink-soft); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pending-image-preview button { border: none; background: transparent; color: var(--danger); font-size: 13px; }
+.file-label { font-size: 12px; color: var(--ink-soft); cursor: pointer; }
+
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow); z-index: 50; }
+.toast button { border: none; background: transparent; color: var(--gold); text-decoration: underline; font-size: 13px; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.82); display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.active { display: flex; }
+.modal-overlay img { max-width: 88vw; max-height: 88vh; border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+
+.dialog-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.5); display: none; align-items: center; justify-content: center; z-index: 90; }
+.dialog-overlay.active { display: flex; }
+.dialog { background: var(--paper-card); border-radius: var(--radius); padding: 24px; width: 300px; box-shadow: var(--shadow); }
+.dialog h3 { margin: 0 0 14px; font-family: 'Shippori Mincho', serif; font-size: 16px; }
+.dialog input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--rule-strong); border-radius: var(--radius); margin-bottom: 12px; font-size: 14px; }
+.dialog label.checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 16px; color: var(--ink-soft); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.dialog-actions button { border: none; padding: 8px 14px; border-radius: var(--radius); font-size: 13px; }
+.dialog-actions .cancel { background: transparent; color: var(--ink-soft); }
+.dialog-actions .confirm { background: var(--ink); color: #fff; }
+
+@media (max-width: 720px) {
+  #app-screen.active { flex-direction: column; }
+  .spiral { display: none; }
+  .tabs { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 16px 12px 0; }
+  .tab-btn { margin-right: 0; border-radius: 16px; }
+  .tab-btn.active { transform: none; }
+  .main { padding: 24px 18px; }
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <h1>プロンプト帳</h1>
+    <p class="tagline" id="login-tagline">合言葉を入力して開いてください</p>
+    <input type="password" id="password-input" placeholder="合言葉" autocomplete="current-password">
+    <button id="unlock-btn">開く</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+  <p class="local-note">現在はこのブラウザ内だけに暗号化して保存されるローカル版です（他の端末とは同期しません）。合言葉はどこにも保存されないため、忘れると復元できません。</p>
+</div>
+
+<div id="app-screen">
+  <div class="spiral">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <div class="tabs" id="tabs-container"></div>
+
+  <div class="main">
+    <div class="main-header">
+      <h2 id="current-genre-title">業務用</h2>
+      <div class="header-actions">
+        <button class="lock-btn" id="export-btn">⬇ 書き出し</button>
+        <label class="lock-btn file-label" id="import-label">⬆ 読み込み
+          <input type="file" id="import-input" accept="application/json" style="display:none;">
+        </label>
+        <button class="lock-btn" id="lock-btn">🔒 閉じる</button>
+      </div>
+    </div>
+
+    <button class="add-new-btn" id="add-new-btn">＋ 新しいプロンプトを追加</button>
+
+    <div id="prompt-list"></div>
+    <div class="empty-state" id="empty-state" style="display:none;">まだプロンプトがありません</div>
+  </div>
+</div>
+
+<div class="editor-overlay" id="editor-overlay">
+  <div class="editor-panel" id="editor-panel">
+    <div class="editor-topbar">
+      <input type="text" id="editor-title" placeholder="タイトル（任意）">
+      <button id="editor-close-btn">✕</button>
+    </div>
+    <textarea id="editor-text" placeholder="プロンプトを入力…"></textarea>
+    <div class="editor-image-area" id="editor-image-area" style="display:none;">
+      <div class="pending-image-preview" id="pending-image-preview" style="display:none;">
+        <img id="pending-image-thumb" alt="添付画像">
+        <span id="pending-image-name"></span>
+        <button id="pending-image-remove">✕ 画像を外す</button>
+      </div>
+      <label class="file-label" id="editor-file-label">
+        📎 画像を添付
+        <input type="file" id="editor-image-input" accept="image/*" style="display:none;">
+      </label>
+      <p class="paste-hint">画像はここに貼り付け(Ctrl+V)、またはドラッグ＆ドロップでも添付できます</p>
+    </div>
+  </div>
+</div>
+
+<div class="dialog-overlay" id="genre-dialog-overlay">
+  <div class="dialog">
+    <h3>ジャンルを追加</h3>
+    <input type="text" id="genre-name-input" placeholder="ジャンル名（例：SNS投稿用）">
+    <label class="checkbox-row">
+      <input type="checkbox" id="genre-image-checkbox">
+      画像添付・お気に入り機能を使う（画像生成用など）
+    </label>
+    <div class="dialog-actions">
+      <button class="cancel" id="genre-cancel-btn">キャンセル</button>
+      <button class="confirm" id="genre-confirm-btn">追加</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="image-modal">
+  <img id="modal-image" src="" alt="拡大画像">
+</div>
+
+<script type="module">
+// ============== crypto: パスワードから鍵を作り、AES-GCMで暗号化・復号 ==============
+const PBKDF2_ITERATIONS = 250000;
+
+function bufToB64(buf) {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+function b64ToBuf(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+function randomBytes(len) { const arr = new Uint8Array(len); crypto.getRandomValues(arr); return arr; }
+function newSaltB64() { return bufToB64(randomBytes(16)); }
+
+async function deriveKey(password, saltB64) {
+  const enc = new TextEncoder();
+  const salt = b64ToBuf(saltB64);
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+async function encryptJSON(obj, key) {
+  const iv = randomBytes(12);
+  const enc = new TextEncoder();
+  const plaintext = enc.encode(JSON.stringify(obj));
+  const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  return { ivB64: bufToB64(iv), ciphertextB64: bufToB64(cipherBuf) };
+}
+async function decryptJSON(ivB64, ciphertextB64, key) {
+  const iv = new Uint8Array(b64ToBuf(ivB64));
+  const cipherBuf = b64ToBuf(ciphertextB64);
+  const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBuf);
+  return JSON.parse(new TextDecoder().decode(plainBuf));
+}
+async function encryptBytes(arrayBuffer, key) {
+  const iv = randomBytes(12);
+  const cipherBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, arrayBuffer);
+  return { ivB64: bufToB64(iv), cipherBuffer: cipherBuf };
+}
+async function decryptBytes(ivB64, cipherArrayBuffer, key) {
+  const iv = new Uint8Array(b64ToBuf(ivB64));
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherArrayBuffer);
+}
+
+// ============== storage: IndexedDBにこのブラウザ内だけで保存 ==============
+const DB_NAME = 'promptNotebookDB';
+const DB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('images')) db.createObjectStore('images', { keyPath: 'imageId' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbGet(db, store, key) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbPut(db, store, value) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(value);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function idbDelete(db, store, key) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ============== アプリ本体 ==============
+const PALETTE = ['#35507a', '#7a3b4e', '#3f6b52', '#8a6a2f', '#5a4a7a', '#2f6a6b'];
+const $ = (sel) => document.querySelector(sel);
+
+let db = null;
+let encKey = null;
+let notebook = null;
+let currentView = null;
+let editUndoMap = new Map();
+let imageUrlCache = new Map();
+
+function uid() {
+  return crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+function defaultNotebook() {
+  return {
+    genres: [
+      { id: uid(), name: '業務用', hasImage: false, color: PALETTE[0] },
+      { id: uid(), name: '画像生成用', hasImage: true, color: PALETTE[1] },
+    ],
+    prompts: [],
+  };
+}
+
+async function unlock() {
+  const password = $('#password-input').value;
+  const errEl = $('#login-error');
+  errEl.textContent = '';
+  if (!password) { errEl.textContent = '合言葉を入力してください'; return; }
+  $('#unlock-btn').disabled = true;
+  $('#unlock-btn').textContent = '開いています…';
+
+  try {
+    db = await openDB();
+    const meta = await idbGet(db, 'meta', 'notebook');
+
+    if (!meta) {
+      const salt = newSaltB64();
+      encKey = await deriveKey(password, salt);
+      notebook = defaultNotebook();
+      const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
+      await idbPut(db, 'meta', { key: 'notebook', salt, iv: ivB64, ciphertext: ciphertextB64 });
+    } else {
+      encKey = await deriveKey(password, meta.salt);
+      notebook = await decryptJSON(meta.iv, meta.ciphertext, encKey);
+    }
+
+    currentView = notebook.genres[0]?.id || '__fav__';
+    $('#login-screen').style.display = 'none';
+    $('#app-screen').classList.add('active');
+    renderTabs();
+    renderView();
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '合言葉が違います';
+    encKey = null; notebook = null;
+  } finally {
+    $('#unlock-btn').disabled = false;
+    $('#unlock-btn').textContent = '開く';
+  }
+}
+
+function lock() {
+  encKey = null; notebook = null;
+  editUndoMap.clear();
+  imageUrlCache.forEach((u) => URL.revokeObjectURL(u));
+  imageUrlCache.clear();
+  $('#password-input').value = '';
+  $('#app-screen').classList.remove('active');
+  $('#login-screen').style.display = 'flex';
+}
+
+// ---------- 書き出し・読み込み（Supabase移行時にそのまま使える形式） ----------
+async function exportNotebook() {
+  const meta = await idbGet(db, 'meta', 'notebook');
+  if (!meta) return;
+
+  const tx = db.transaction('images', 'readonly');
+  const allImages = await new Promise((resolve, reject) => {
+    const req = tx.objectStore('images').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    notebook: { salt: meta.salt, iv: meta.iv, ciphertext: meta.ciphertext },
+    images: allImages.map((rec) => ({
+      imageId: rec.imageId, iv: rec.iv, mime: rec.mime, cipherB64: bufToB64(rec.cipher),
+    })),
+  };
+
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `prompt-notebook-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function importNotebookFile(file) {
+  if (!confirm('読み込むと、今ブラウザに保存されている内容は上書きされます。よろしいですか？')) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload || !payload.notebook || !payload.notebook.ciphertext) {
+      alert('このファイルは読み込めませんでした（形式が違います）');
+      return;
+    }
+    await idbPut(db, 'meta', {
+      key: 'notebook', salt: payload.notebook.salt, iv: payload.notebook.iv, ciphertext: payload.notebook.ciphertext,
+    });
+    for (const img of (payload.images || [])) {
+      await idbPut(db, 'images', { imageId: img.imageId, iv: img.iv, mime: img.mime, cipher: b64ToBuf(img.cipherB64) });
+    }
+    alert('読み込みが完了しました。書き出し時の合言葉で開き直してください。');
+    lock();
+  } catch (e) {
+    console.error(e);
+    alert('読み込みに失敗しました。ファイルをご確認ください。');
+  }
+}
+
+async function saveNotebook() {
+  const meta = await idbGet(db, 'meta', 'notebook');
+  const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
+  await idbPut(db, 'meta', { key: 'notebook', salt: meta.salt, iv: ivB64, ciphertext: ciphertextB64 });
+}
+
+function renderTabs() {
+  const container = $('#tabs-container');
+  container.innerHTML = '';
+  notebook.genres.forEach((g) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (currentView === g.id ? ' active' : '');
+    btn.style.background = g.color;
+    btn.textContent = g.name;
+    btn.onclick = () => { clearPendingImage(); currentView = g.id; renderTabs(); renderView(); };
+    container.appendChild(btn);
+  });
+
+  const addRow = document.createElement('div');
+  addRow.className = 'tab-add-row';
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '＋ ジャンルを追加';
+  addBtn.onclick = openGenreDialog;
+  addRow.appendChild(addBtn);
+  container.appendChild(addRow);
+
+  const favBtn = document.createElement('button');
+  favBtn.className = 'tab-btn fav-tab' + (currentView === '__fav__' ? ' active' : '');
+  favBtn.textContent = '★ お気に入り';
+  favBtn.onclick = () => { clearPendingImage(); currentView = '__fav__'; renderTabs(); renderView(); };
+  container.appendChild(favBtn);
+
+  const trashBtn = document.createElement('button');
+  trashBtn.className = 'tab-btn trash-tab' + (currentView === '__trash__' ? ' active' : '');
+  trashBtn.textContent = '🗑 ゴミ箱';
+  trashBtn.onclick = () => { clearPendingImage(); currentView = '__trash__'; renderTabs(); renderView(); };
+  container.appendChild(trashBtn);
+}
+
+function currentGenre() { return notebook.genres.find((g) => g.id === currentView) || null; }
+function genreOf(p) { return notebook.genres.find((g) => g.id === p.genreId); }
+
+function renderView() {
+  const titleEl = $('#current-genre-title');
+  const addBtn = $('#add-new-btn');
+  const list = $('#prompt-list');
+  list.innerHTML = '';
+
+  let items = [];
+  if (currentView === '__trash__') {
+    titleEl.textContent = 'ゴミ箱';
+    addBtn.style.display = 'none';
+    items = notebook.prompts.filter((p) => p.trashed);
+  } else if (currentView === '__fav__') {
+    titleEl.textContent = 'お気に入り';
+    addBtn.style.display = 'none';
+    items = notebook.prompts.filter((p) => p.favorite && !p.trashed);
+  } else {
+    const g = currentGenre();
+    titleEl.textContent = g ? g.name : '';
+    addBtn.style.display = 'block';
+    items = notebook.prompts.filter((p) => p.genreId === currentView && !p.trashed);
+  }
+
+  items.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  $('#empty-state').style.display = items.length ? 'none' : 'block';
+  items.forEach((p) => list.appendChild(renderCard(p)));
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const mm = d.getMonth() + 1, dd = d.getDate();
+  const hh = String(d.getHours()).padStart(2, '0'), mi = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${mi}`;
+}
+
+function renderCard(p) {
+  const card = document.createElement('div');
+  card.className = 'prompt-card';
+  card.onclick = () => openEditor(p);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  const g = genreOf(p);
+
+  if (g && g.hasImage && p.imageId) {
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.alt = '添付画像';
+    loadImageUrl(p).then((url) => { if (url) img.src = url; });
+    img.onclick = async (e) => {
+      e.stopPropagation();
+      const url = await loadImageUrl(p);
+      if (url) openImageModal(url);
+    };
+    body.appendChild(img);
+  }
+
+  const textWrap = document.createElement('div');
+  textWrap.className = 'card-text';
+  const titleEl = document.createElement('div');
+  const fallbackTitle = p.text ? p.text.split('\n')[0].slice(0, 30) : '(無題)';
+  titleEl.className = 'card-title' + (p.title ? '' : ' placeholder');
+  titleEl.textContent = p.title || fallbackTitle;
+  const previewEl = document.createElement('div');
+  previewEl.className = 'card-preview';
+  previewEl.textContent = p.text;
+  textWrap.appendChild(titleEl);
+  textWrap.appendChild(previewEl);
+  body.appendChild(textWrap);
+  card.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  const dateEl = document.createElement('span');
+  dateEl.className = 'card-date';
+  dateEl.textContent = formatDate(p.updatedAt);
+  actions.appendChild(dateEl);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'icon-btn';
+  copyBtn.textContent = '📋 コピー';
+  copyBtn.onclick = async (e) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(p.text);
+    copyBtn.textContent = '✓ コピーしました';
+    copyBtn.classList.add('copy-flash');
+    setTimeout(() => { copyBtn.textContent = '📋 コピー'; copyBtn.classList.remove('copy-flash'); }, 1500);
+  };
+  actions.appendChild(copyBtn);
+
+  if (g && g.hasImage) {
+    const starBtn = document.createElement('button');
+    starBtn.className = 'icon-btn star' + (p.favorite ? ' active' : '');
+    starBtn.textContent = p.favorite ? '★ お気に入り' : '☆ お気に入り';
+    starBtn.onclick = async (e) => { e.stopPropagation(); p.favorite = !p.favorite; await saveNotebook(); renderView(); };
+    actions.appendChild(starBtn);
+  }
+
+  const spacer = document.createElement('span');
+  spacer.className = 'card-meta-spacer';
+  actions.appendChild(spacer);
+
+  if (editUndoMap.has(p.id)) {
+    const undoLink = document.createElement('button');
+    undoLink.className = 'icon-btn undo-hint';
+    undoLink.textContent = '↩ 編集前に戻す';
+    undoLink.onclick = async (e) => {
+      e.stopPropagation();
+      const prev = editUndoMap.get(p.id);
+      p.title = prev.title; p.text = prev.text;
+      editUndoMap.delete(p.id);
+      p.updatedAt = new Date().toISOString();
+      await saveNotebook();
+      renderView();
+    };
+    actions.appendChild(undoLink);
+  }
+
+  if (currentView === '__trash__') {
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'icon-btn';
+    restoreBtn.textContent = '元に戻す';
+    restoreBtn.onclick = async (e) => { e.stopPropagation(); p.trashed = false; await saveNotebook(); renderView(); };
+    actions.appendChild(restoreBtn);
+
+    const purgeBtn = document.createElement('button');
+    purgeBtn.className = 'icon-btn';
+    purgeBtn.textContent = '完全に削除';
+    purgeBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm('完全に削除します。元に戻せません。よろしいですか？')) return;
+      if (p.imageId) await deleteImage(p);
+      notebook.prompts = notebook.prompts.filter((x) => x.id !== p.id);
+      await saveNotebook();
+      renderView();
+    };
+    actions.appendChild(purgeBtn);
+  } else {
+    const trashBtn = document.createElement('button');
+    trashBtn.className = 'icon-btn';
+    trashBtn.textContent = '🗑 削除';
+    trashBtn.onclick = async (e) => {
+      e.stopPropagation();
+      p.trashed = true;
+      p.updatedAt = new Date().toISOString();
+      await saveNotebook();
+      renderView();
+      showUndoToast('ゴミ箱に移動しました', async () => { p.trashed = false; await saveNotebook(); renderView(); });
+    };
+    actions.appendChild(trashBtn);
+  }
+
+  card.appendChild(actions);
+  return card;
+}
+
+async function uploadImage(file) {
+  const buf = await file.arrayBuffer();
+  const { ivB64, cipherBuffer } = await encryptBytes(buf, encKey);
+  const imageId = uid();
+  await idbPut(db, 'images', { imageId, iv: ivB64, mime: file.type || 'image/png', cipher: cipherBuffer });
+  return { imageId, imageIv: ivB64, imageMime: file.type || 'image/png' };
+}
+async function loadImageUrl(p) {
+  if (!p.imageId) return null;
+  if (imageUrlCache.has(p.id)) return imageUrlCache.get(p.id);
+  try {
+    const rec = await idbGet(db, 'images', p.imageId);
+    if (!rec) return null;
+    const plainBuf = await decryptBytes(p.imageIv, rec.cipher, encKey);
+    const blob = new Blob([plainBuf], { type: p.imageMime || 'image/png' });
+    const url = URL.createObjectURL(blob);
+    imageUrlCache.set(p.id, url);
+    return url;
+  } catch (e) {
+    console.error('画像の復号に失敗しました', e);
+    return null;
+  }
+}
+async function deleteImage(p) {
+  await idbDelete(db, 'images', p.imageId);
+  if (imageUrlCache.has(p.id)) { URL.revokeObjectURL(imageUrlCache.get(p.id)); imageUrlCache.delete(p.id); }
+}
+
+function openImageModal(url) { $('#modal-image').src = url; $('#image-modal').classList.add('active'); }
+
+// ---------- 画像の添付（ファイル選択・ドラッグ＆ドロップ・貼り付け共通） ----------
+let pendingImageFile = null;
+let pendingImagePreviewUrl = null;
+
+function setPendingImage(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) return;
+  clearPendingImagePreviewUrl();
+  pendingImageFile = file;
+  editorRemoveImage = false;
+  pendingImagePreviewUrl = URL.createObjectURL(file);
+  $('#pending-image-thumb').src = pendingImagePreviewUrl;
+  $('#pending-image-name').textContent = file.name || '貼り付けた画像';
+  $('#pending-image-preview').style.display = 'flex';
+}
+function clearPendingImagePreviewUrl() {
+  if (pendingImagePreviewUrl) { URL.revokeObjectURL(pendingImagePreviewUrl); pendingImagePreviewUrl = null; }
+}
+function clearPendingImage() {
+  pendingImageFile = null;
+  clearPendingImagePreviewUrl();
+  $('#pending-image-preview').style.display = 'none';
+  $('#editor-image-input').value = '';
+}
+function removeEditorImage() {
+  clearPendingImage();
+  editorRemoveImage = true;
+}
+
+// ---------- フルスクリーン編集ポップアップ ----------
+let editingPromptId = null;
+let editorOriginalSnapshot = null;
+let editorHasImageGenre = false;
+let editorRemoveImage = false;
+
+function openEditor(p) {
+  editingPromptId = p ? p.id : null;
+  const g = p ? genreOf(p) : currentGenre();
+  editorHasImageGenre = !!(g && g.hasImage);
+  editorRemoveImage = false;
+  clearPendingImage();
+
+  $('#editor-title').value = p ? (p.title || '') : '';
+  $('#editor-text').value = p ? p.text : '';
+  editorOriginalSnapshot = p ? { title: p.title || '', text: p.text } : null;
+
+  $('#editor-image-area').style.display = editorHasImageGenre ? 'block' : 'none';
+  if (editorHasImageGenre && p && p.imageId) {
+    loadImageUrl(p).then((url) => {
+      if (url) {
+        $('#pending-image-thumb').src = url;
+        $('#pending-image-name').textContent = '添付済みの画像';
+        $('#pending-image-preview').style.display = 'flex';
+      }
+    });
+  }
+
+  $('#editor-overlay').classList.add('active');
+  setTimeout(() => $('#editor-text').focus(), 50);
+}
+
+async function closeEditorSave() {
+  const title = $('#editor-title').value.trim();
+  const text = $('#editor-text').value.trim();
+
+  if (!editingPromptId) {
+    if (!text) { closeEditorUI(); return; }
+    const g = currentGenre();
+    if (!g) { closeEditorUI(); return; }
+    const p = {
+      id: uid(), genreId: g.id, title, text, favorite: false, trashed: false,
+      imageId: null, imageIv: null, imageMime: null,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    };
+    if (g.hasImage && pendingImageFile) {
+      const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
+      p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
+    }
+    notebook.prompts.push(p);
+    await saveNotebook();
+  } else {
+    const p = notebook.prompts.find((x) => x.id === editingPromptId);
+    if (p) {
+      const changed = (p.title || '') !== title || p.text !== text;
+      if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
+      p.title = title; p.text = text; p.updatedAt = new Date().toISOString();
+
+      if (editorRemoveImage && p.imageId) {
+        await deleteImage(p);
+        p.imageId = null; p.imageIv = null; p.imageMime = null;
+      } else if (pendingImageFile) {
+        if (p.imageId) await deleteImage(p);
+        const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
+        p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
+      }
+      await saveNotebook();
+    }
+  }
+
+  closeEditorUI();
+  renderView();
+}
+
+function closeEditorDiscard() {
+  closeEditorUI();
+}
+
+function closeEditorUI() {
+  $('#editor-overlay').classList.remove('active');
+  editingPromptId = null;
+  editorOriginalSnapshot = null;
+  clearPendingImage();
+  editorRemoveImage = false;
+}
+
+function openGenreDialog() {
+  $('#genre-name-input').value = '';
+  $('#genre-image-checkbox').checked = false;
+  $('#genre-dialog-overlay').classList.add('active');
+}
+function closeGenreDialog() { $('#genre-dialog-overlay').classList.remove('active'); }
+async function confirmAddGenre() {
+  const name = $('#genre-name-input').value.trim();
+  if (!name) return;
+  const hasImage = $('#genre-image-checkbox').checked;
+  const color = PALETTE[notebook.genres.length % PALETTE.length];
+  const g = { id: uid(), name, hasImage, color };
+  notebook.genres.push(g);
+  await saveNotebook();
+  currentView = g.id;
+  closeGenreDialog();
+  renderTabs();
+  renderView();
+}
+
+let toastTimer = null;
+function showUndoToast(message, onUndo) {
+  let toast = document.querySelector('.toast');
+  if (toast) toast.remove();
+  toast = document.createElement('div');
+  toast.className = 'toast';
+  const msg = document.createElement('span');
+  msg.textContent = message;
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = '取り消す';
+  undoBtn.onclick = () => { onUndo(); toast.remove(); clearTimeout(toastTimer); };
+  toast.appendChild(msg); toast.appendChild(undoBtn);
+  document.body.appendChild(toast);
+  toastTimer = setTimeout(() => toast.remove(), 6000);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  $('#unlock-btn').onclick = unlock;
+  $('#password-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
+  $('#lock-btn').onclick = lock;
+  $('#export-btn').onclick = exportNotebook;
+  $('#import-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) importNotebookFile(file);
+    e.target.value = '';
+  });
+  $('#add-new-btn').onclick = () => openEditor(null);
+  $('#genre-cancel-btn').onclick = closeGenreDialog;
+  $('#genre-confirm-btn').onclick = confirmAddGenre;
+  $('#image-modal').onclick = () => $('#image-modal').classList.remove('active');
+
+  // 編集ポップアップ：閉じる操作＝自動保存
+  $('#editor-close-btn').onclick = () => closeEditorSave();
+  $('#editor-overlay').addEventListener('click', (e) => {
+    if (e.target === $('#editor-overlay')) closeEditorSave();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $('#editor-overlay').classList.contains('active')) closeEditorSave();
+  });
+
+  // 画像：ファイル選択
+  $('#editor-image-input').addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) setPendingImage(e.target.files[0]);
+  });
+  $('#pending-image-remove').onclick = removeEditorImage;
+
+  // 画像：ドラッグ＆ドロップ（編集パネル内、画像対応ジャンルのときのみ）
+  const editorPanel = $('#editor-panel');
+  editorPanel.addEventListener('dragover', (e) => {
+    if (!editorHasImageGenre) return;
+    e.preventDefault();
+    editorPanel.classList.add('drag-over');
+  });
+  editorPanel.addEventListener('dragleave', () => editorPanel.classList.remove('drag-over'));
+  editorPanel.addEventListener('drop', (e) => {
+    if (!editorHasImageGenre) return;
+    e.preventDefault();
+    editorPanel.classList.remove('drag-over');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) setPendingImage(file);
+  });
+
+  // 画像：貼り付け（Ctrl+V / Cmd+V）
+  $('#editor-text').addEventListener('paste', (e) => {
+    if (!editorHasImageGenre) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { setPendingImage(file); e.preventDefault(); }
+        break;
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

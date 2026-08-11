@@ -139,7 +139,7 @@ textarea, input { font-family: inherit; }
     <button id="unlock-btn">開く</button>
     <div class="login-error" id="login-error"></div>
   </div>
-  <p class="local-note">現在はこのブラウザ内だけに暗号化して保存されるローカル版です（他の端末とは同期しません）。合言葉はどこにも保存されないため、忘れると復元できません。</p>
+  <p class="local-note">内容は合言葉から作った鍵でこの端末上で暗号化してからクラウド(Supabase)に保存します。同じ合言葉ならPC・スマホどちらからでも同じ内容が見られます。合言葉はどこにも保存されないため、忘れると復元できません。</p>
 </div>
 
 <div id="app-screen">
@@ -211,6 +211,18 @@ textarea, input { font-family: inherit; }
 </div>
 
 <script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ============== Supabase 連携設定 ==============
+const SUPABASE_URL = 'https://edfrjxjdzxutcjeayfac.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_GVtanlT_gDwSEQSsZPC_NQ_nEK-60x2';
+const NOTEBOOK_TABLE = 'prompt-notebook';
+const IMAGES_TABLE = 'prompt-notebook-images';
+const NOTEBOOK_ROW_ID = 'notebook';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let realtimeChannel = null;
+
 // ============== crypto: パスワードから鍵を作り、AES-GCMで暗号化・復号 ==============
 const PBKDF2_ITERATIONS = 250000;
 
@@ -302,6 +314,67 @@ function idbDelete(db, store, key) {
   });
 }
 
+// ============== storage: Supabase（他端末とも同期） ==============
+async function fetchRemoteNotebook() {
+  const { data, error } = await supabase
+    .from(NOTEBOOK_TABLE)
+    .select('id, salt, iv, ciphertext')
+    .eq('id', NOTEBOOK_ROW_ID)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+async function pushRemoteNotebook(salt, ivB64, ciphertextB64) {
+  const { error } = await supabase.from(NOTEBOOK_TABLE).upsert({
+    id: NOTEBOOK_ROW_ID, salt, iv: ivB64, ciphertext: ciphertextB64, updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+async function fetchRemoteImage(imageId) {
+  const { data, error } = await supabase
+    .from(IMAGES_TABLE)
+    .select('image_id, iv, mime, cipher_b64')
+    .eq('image_id', imageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+async function pushRemoteImage(imageId, ivB64, mime, cipherB64) {
+  const { error } = await supabase.from(IMAGES_TABLE).upsert({
+    image_id: imageId, iv: ivB64, mime, cipher_b64: cipherB64, updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+async function deleteRemoteImage(imageId) {
+  const { error } = await supabase.from(IMAGES_TABLE).delete().eq('image_id', imageId);
+  if (error) throw error;
+}
+
+function subscribeRealtime() {
+  if (realtimeChannel) return;
+  realtimeChannel = supabase
+    .channel('prompt-notebook-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: NOTEBOOK_TABLE, filter: `id=eq.${NOTEBOOK_ROW_ID}` }, async (payload) => {
+      if (!encKey || !payload.new) return;
+      try {
+        const decrypted = await decryptJSON(payload.new.iv, payload.new.ciphertext, encKey);
+        notebook = decrypted;
+        await idbPut(db, 'meta', { key: 'notebook', salt: payload.new.salt, iv: payload.new.iv, ciphertext: payload.new.ciphertext });
+        if (currentView !== '__fav__' && currentView !== '__trash__' && !currentGenre()) {
+          currentView = notebook.genres[0]?.id || '__fav__';
+        }
+        renderTabs();
+        renderView();
+      } catch (e) {
+        console.warn('他端末からの更新の復号に失敗しました', e);
+      }
+    })
+    .subscribe();
+}
+function unsubscribeRealtime() {
+  if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
+}
+
 // ============== アプリ本体 ==============
 const PALETTE = ['#35507a', '#7a3b4e', '#3f6b52', '#8a6a2f', '#5a4a7a', '#2f6a6b'];
 const $ = (sel) => document.querySelector(sel);
@@ -336,17 +409,32 @@ async function unlock() {
 
   try {
     db = await openDB();
-    const meta = await idbGet(db, 'meta', 'notebook');
+    const localMeta = await idbGet(db, 'meta', 'notebook');
 
-    if (!meta) {
+    let remoteRow = null;
+    try {
+      remoteRow = await fetchRemoteNotebook();
+    } catch (e) {
+      console.warn('Supabaseに接続できませんでした。ローカルのデータで開きます。', e);
+    }
+
+    if (remoteRow) {
+      encKey = await deriveKey(password, remoteRow.salt);
+      notebook = await decryptJSON(remoteRow.iv, remoteRow.ciphertext, encKey);
+      await idbPut(db, 'meta', { key: 'notebook', salt: remoteRow.salt, iv: remoteRow.iv, ciphertext: remoteRow.ciphertext });
+    } else if (localMeta) {
+      encKey = await deriveKey(password, localMeta.salt);
+      notebook = await decryptJSON(localMeta.iv, localMeta.ciphertext, encKey);
+      try { await pushRemoteNotebook(localMeta.salt, localMeta.iv, localMeta.ciphertext); }
+      catch (e) { console.warn('Supabaseへの移行に失敗しました（ローカルでは開けています）', e); }
+    } else {
       const salt = newSaltB64();
       encKey = await deriveKey(password, salt);
       notebook = defaultNotebook();
       const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
       await idbPut(db, 'meta', { key: 'notebook', salt, iv: ivB64, ciphertext: ciphertextB64 });
-    } else {
-      encKey = await deriveKey(password, meta.salt);
-      notebook = await decryptJSON(meta.iv, meta.ciphertext, encKey);
+      try { await pushRemoteNotebook(salt, ivB64, ciphertextB64); }
+      catch (e) { console.warn('Supabaseへの保存に失敗しました（ローカルには保存済みです）', e); }
     }
 
     currentView = notebook.genres[0]?.id || '__fav__';
@@ -354,6 +442,7 @@ async function unlock() {
     $('#app-screen').classList.add('active');
     renderTabs();
     renderView();
+    subscribeRealtime();
   } catch (e) {
     console.error(e);
     errEl.textContent = '合言葉が違います';
@@ -365,6 +454,7 @@ async function unlock() {
 }
 
 function lock() {
+  unsubscribeRealtime();
   encKey = null; notebook = null;
   editUndoMap.clear();
   imageUrlCache.forEach((u) => URL.revokeObjectURL(u));
@@ -434,6 +524,11 @@ async function saveNotebook() {
   const meta = await idbGet(db, 'meta', 'notebook');
   const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
   await idbPut(db, 'meta', { key: 'notebook', salt: meta.salt, iv: ivB64, ciphertext: ciphertextB64 });
+  try {
+    await pushRemoteNotebook(meta.salt, ivB64, ciphertextB64);
+  } catch (e) {
+    console.warn('Supabaseへの同期に失敗しました（ローカルには保存済みです）', e);
+  }
 }
 
 function renderTabs() {
@@ -633,16 +728,30 @@ async function uploadImage(file) {
   const buf = await file.arrayBuffer();
   const { ivB64, cipherBuffer } = await encryptBytes(buf, encKey);
   const imageId = uid();
-  await idbPut(db, 'images', { imageId, iv: ivB64, mime: file.type || 'image/png', cipher: cipherBuffer });
-  return { imageId, imageIv: ivB64, imageMime: file.type || 'image/png' };
+  const mime = file.type || 'image/png';
+  await idbPut(db, 'images', { imageId, iv: ivB64, mime, cipher: cipherBuffer });
+  try {
+    await pushRemoteImage(imageId, ivB64, mime, bufToB64(cipherBuffer));
+  } catch (e) {
+    console.warn('画像のSupabase同期に失敗しました（ローカルには保存済みです）', e);
+  }
+  return { imageId, imageIv: ivB64, imageMime: mime };
 }
 async function loadImageUrl(p) {
   if (!p.imageId) return null;
   if (imageUrlCache.has(p.id)) return imageUrlCache.get(p.id);
   try {
-    const rec = await idbGet(db, 'images', p.imageId);
-    if (!rec) return null;
-    const plainBuf = await decryptBytes(p.imageIv, rec.cipher, encKey);
+    let rec = await idbGet(db, 'images', p.imageId);
+    let cipherBuf;
+    if (rec) {
+      cipherBuf = rec.cipher;
+    } else {
+      const remoteRec = await fetchRemoteImage(p.imageId);
+      if (!remoteRec) return null;
+      cipherBuf = b64ToBuf(remoteRec.cipher_b64);
+      await idbPut(db, 'images', { imageId: p.imageId, iv: remoteRec.iv, mime: remoteRec.mime, cipher: cipherBuf });
+    }
+    const plainBuf = await decryptBytes(p.imageIv, cipherBuf, encKey);
     const blob = new Blob([plainBuf], { type: p.imageMime || 'image/png' });
     const url = URL.createObjectURL(blob);
     imageUrlCache.set(p.id, url);
@@ -654,6 +763,11 @@ async function loadImageUrl(p) {
 }
 async function deleteImage(p) {
   await idbDelete(db, 'images', p.imageId);
+  try {
+    await deleteRemoteImage(p.imageId);
+  } catch (e) {
+    console.warn('画像のSupabase側削除に失敗しました', e);
+  }
   if (imageUrlCache.has(p.id)) { URL.revokeObjectURL(imageUrlCache.get(p.id)); imageUrlCache.delete(p.id); }
 }
 

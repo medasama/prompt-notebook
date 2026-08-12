@@ -47,7 +47,7 @@ textarea, input { font-family: inherit; }
 .spiral span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rule-strong); background: var(--paper); }
 
 .tabs { width: 168px; flex-shrink: 0; padding: 78px 0 20px; display: flex; flex-direction: column; gap: 6px; }
-.tab-btn { border: none; padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 500; color: #fff; border-radius: 0 20px 20px 0; margin-right: 14px; box-shadow: var(--shadow); opacity: 0.72; transition: opacity 0.15s, transform 0.15s; }
+.tab-btn { border: none; padding: 9px 14px; text-align: left; font-size: 13px; font-weight: 500; color: #fff; border-radius: 0 20px 20px 0; margin-right: 14px; box-shadow: var(--shadow); opacity: 0.72; transition: opacity 0.15s, transform 0.15s; }
 .tab-btn:hover { opacity: 0.9; transform: translateX(2px); }
 .tab-btn.active { opacity: 1; margin-right: 0; transform: translateX(0); }
 .tab-btn.trash-tab { background: var(--ink-soft) !important; margin-top: 18px; }
@@ -65,16 +65,16 @@ textarea, input { font-family: inherit; }
 .add-new-btn { display: block; width: 100%; text-align: left; background: var(--paper-card); border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 16px; margin-bottom: 28px; color: var(--ink-soft); font-size: 14px; box-shadow: var(--shadow); }
 .add-new-btn:hover { background: #f4f0e2; color: var(--ink); }
 
-.prompt-card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--shadow); position: relative; }
-.prompt-card .card-body { display: flex; gap: 12px; cursor: pointer; }
-.prompt-card .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule-strong); cursor: zoom-in; flex-shrink: 0; }
+.prompt-card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; box-shadow: var(--shadow); position: relative; }
+.prompt-card .card-body { display: flex; gap: 10px; cursor: pointer; }
+.prompt-card .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule-strong); cursor: zoom-in; flex-shrink: 0; }
 .card-text { flex: 1; min-width: 0; }
-.card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.card-title { font-weight: 700; font-size: 13.5px; margin-bottom: 2px; }
 .card-title.placeholder { color: var(--ink-soft); font-weight: 500; }
-.card-preview { font-size: 13px; color: var(--ink-soft); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
-.card-date { font-size: 11px; color: var(--ink-soft); }
-.prompt-card .card-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
-.icon-btn { border: none; background: transparent; font-size: 13px; color: var(--ink-soft); padding: 4px 6px; border-radius: var(--radius); }
+.card-preview { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.card-date { font-size: 10.5px; color: var(--ink-soft); }
+.prompt-card .card-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11.5px; color: var(--ink-soft); flex-wrap: wrap; }
+.icon-btn { border: none; background: transparent; font-size: 12px; color: var(--ink-soft); padding: 3px 5px; border-radius: var(--radius); }
 .icon-btn:hover { background: var(--paper); color: var(--ink); }
 .icon-btn.star.active { color: var(--gold); }
 .icon-btn.copy-flash { color: #3f6b52; }
@@ -90,6 +90,9 @@ textarea, input { font-family: inherit; }
 .editor-panel.drag-over { outline: 2px dashed var(--accent-business); outline-offset: -2px; }
 .editor-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 #editor-title { flex: 1; min-width: 0; font-size: 20px; font-family: 'Shippori Mincho', serif; border: none; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; background: transparent; outline: none; }
+#editor-copy-btn { flex-shrink: 0; border: none; background: transparent; font-size: 18px; color: var(--ink-soft); line-height: 1; padding: 4px 6px; cursor: pointer; border-radius: var(--radius); }
+#editor-copy-btn:hover { color: var(--ink); background: var(--paper); }
+#editor-copy-btn.copy-flash { color: #3f6b52; }
 #editor-fav-btn { flex-shrink: 0; border: none; background: transparent; font-size: 22px; color: var(--ink-soft); line-height: 1; padding: 4px 6px; cursor: pointer; }
 #editor-fav-btn:hover { color: var(--ink); }
 #editor-fav-btn.active { color: var(--gold); }
@@ -125,14 +128,38 @@ textarea, input { font-family: inherit; }
 @media (max-width: 720px) {
   #app-screen.active { flex-direction: column; }
   .spiral { display: none; }
-  .tabs { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 16px 12px 0; }
-  .tab-btn { margin-right: 0; border-radius: 16px; }
+
+  /* タブ行：折り返し大型ピル→横スクロールの小型チップに */
+  .tabs {
+    width: 100%; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0;
+    padding: 12px 12px; gap: 6px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    margin-right: 0; flex-shrink: 0;
+    padding: 6px 12px; font-size: 12px; border-radius: 14px;
+  }
   .tab-btn.active { transform: none; }
-  .main { padding: 24px 18px; }
-  .main-header { gap: 6px 12px; }
-  .main-header h2 { font-size: 18px; max-width: 60vw; }
-  .header-actions { gap: 10px; }
+  .tab-btn.trash-tab { margin-top: 0; }
+  .tab-add-row { padding: 0; flex-shrink: 0; }
+  .tab-add-row button { white-space: nowrap; padding: 6px 10px; font-size: 11px; }
+
+  .main { padding: 16px 14px; }
+  .main-header { margin-bottom: 14px; gap: 4px 10px; }
+  .main-header h2 { font-size: 16px; max-width: 60vw; }
+  .header-actions { gap: 8px; }
   #export-btn, #import-label { display: none; }
+
+  .add-new-btn { padding: 10px 12px; margin-bottom: 14px; font-size: 13px; }
+
+  /* カードをさらに詰める */
+  .prompt-card { padding: 8px 12px; margin-bottom: 6px; }
+  .prompt-card .thumb { width: 38px; height: 38px; }
+  .card-title { font-size: 13px; }
+  .card-preview { font-size: 12px; -webkit-line-clamp: 1; }
+  .prompt-card .card-actions { margin-top: 4px; gap: 6px; font-size: 11px; }
 }
 </style>
 </head>
@@ -181,6 +208,7 @@ textarea, input { font-family: inherit; }
   <div class="editor-panel" id="editor-panel">
     <div class="editor-topbar">
       <input type="text" id="editor-title" placeholder="タイトル（任意）">
+      <button id="editor-copy-btn" title="コピー">📋</button>
       <button id="editor-fav-btn" title="お気に入り">☆</button>
       <button id="editor-close-btn">✕</button>
     </div>
@@ -653,9 +681,15 @@ function renderView() {
     items = notebook.prompts.filter((p) => p.genreId === currentView && !p.trashed);
   }
 
-  items.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  items.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   $('#empty-state').style.display = items.length ? 'none' : 'block';
   items.forEach((p) => list.appendChild(renderCard(p)));
+}
+
+function sortKey(p) {
+  const u = p.updatedAt || '';
+  const c = p.lastCopiedAt || '';
+  return c > u ? c : u;
 }
 
 function formatDate(iso) {
@@ -716,9 +750,11 @@ function renderCard(p) {
   copyBtn.onclick = async (e) => {
     e.stopPropagation();
     await navigator.clipboard.writeText(p.text);
+    p.lastCopiedAt = new Date().toISOString();
+    await saveNotebook();
     copyBtn.textContent = '✓ コピーしました';
     copyBtn.classList.add('copy-flash');
-    setTimeout(() => { copyBtn.textContent = '📋 コピー'; copyBtn.classList.remove('copy-flash'); }, 1500);
+    setTimeout(() => { renderView(); }, 1500);
   };
   actions.appendChild(copyBtn);
 
@@ -1013,6 +1049,17 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#image-modal').onclick = () => $('#image-modal').classList.remove('active');
 
   $('#editor-fav-btn').onclick = () => { editorFavorite = !editorFavorite; updateEditorFavBtn(); };
+  $('#editor-copy-btn').onclick = async () => {
+    const btn = $('#editor-copy-btn');
+    await navigator.clipboard.writeText($('#editor-text').value);
+    if (editingPromptId) {
+      const p = notebook.prompts.find((x) => x.id === editingPromptId);
+      if (p) { p.lastCopiedAt = new Date().toISOString(); await saveNotebook(); }
+    }
+    btn.textContent = '✓';
+    btn.classList.add('copy-flash');
+    setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copy-flash'); }, 1500);
+  };
 
   // 編集ポップアップ：閉じる操作＝自動保存
   $('#editor-close-btn').onclick = () => closeEditorSave();

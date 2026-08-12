@@ -30,15 +30,19 @@ body {
 button { font-family: inherit; cursor: pointer; }
 textarea, input { font-family: inherit; }
 
-#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+#auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+#login-screen { min-height: 100vh; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
 .login-card { background: var(--paper-card); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--shadow); padding: 40px 36px; width: 320px; text-align: center; }
 .login-card h1 { font-family: 'Shippori Mincho', serif; font-size: 24px; margin: 0 0 4px; letter-spacing: 0.08em; }
 .login-card p.tagline { font-size: 12px; color: var(--ink-soft); margin: 0 0 24px; }
-.login-card input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: #fff; font-size: 15px; margin-bottom: 12px; }
+.login-card input[type="password"], .login-card input[type="email"] { width: 100%; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: #fff; font-size: 15px; margin-bottom: 12px; }
 .login-card button { width: 100%; padding: 10px; border: none; border-radius: var(--radius); background: var(--accent-business); color: #fff; font-size: 14px; letter-spacing: 0.05em; }
 .login-card button:hover { filter: brightness(1.1); }
+.login-card button.secondary { background: transparent; color: var(--ink-soft); text-decoration: underline; font-size: 12px; padding: 4px; margin-top: 4px; }
 .login-error { color: var(--danger); font-size: 12px; min-height: 16px; }
+.login-success { color: #3f6b52; font-size: 12px; min-height: 16px; }
 .local-note { font-size: 11px; color: var(--ink-soft); max-width: 280px; text-align: center; line-height: 1.6; }
+.auth-email-label { font-size: 12px; color: var(--ink-soft); }
 
 #app-screen { display: none; min-height: 100vh; }
 #app-screen.active { display: flex; }
@@ -131,6 +135,23 @@ textarea, input { font-family: inherit; }
 </head>
 <body>
 
+<div id="auth-screen">
+  <div class="login-card">
+    <h1>プロンプト帳</h1>
+    <p class="tagline">メールアドレスでログインしてください</p>
+    <div id="auth-request-view">
+      <input type="email" id="auth-email-input" placeholder="メールアドレス" autocomplete="email">
+      <button id="auth-send-btn">ログイン用リンクを送る</button>
+      <div class="login-error" id="auth-error"></div>
+    </div>
+    <div id="auth-sent-view" style="display:none;">
+      <div class="login-success">確認メールを送りました。メール内のリンクをクリックしてログインしてください。</div>
+      <button class="secondary" id="auth-resend-btn">別のメールアドレスで送り直す</button>
+    </div>
+  </div>
+  <p class="local-note">ログインにはパスワードは不要です。メールに届くリンクをクリックするだけで認証されます。</p>
+</div>
+
 <div id="login-screen">
   <div class="login-card">
     <h1>プロンプト帳</h1>
@@ -138,6 +159,7 @@ textarea, input { font-family: inherit; }
     <input type="password" id="password-input" placeholder="合言葉" autocomplete="current-password">
     <button id="unlock-btn">開く</button>
     <div class="login-error" id="login-error"></div>
+    <button class="secondary" id="auth-signout-btn">別のアカウントでログインし直す</button>
   </div>
   <p class="local-note">内容は合言葉から作った鍵でこの端末上で暗号化してからクラウド(Supabase)に保存します。同じ合言葉ならPC・スマホどちらからでも同じ内容が見られます。合言葉はどこにも保存されないため、忘れると復元できません。</p>
 </div>
@@ -154,11 +176,13 @@ textarea, input { font-family: inherit; }
     <div class="main-header">
       <h2 id="current-genre-title">業務用</h2>
       <div class="header-actions">
+        <span class="auth-email-label" id="auth-email-label"></span>
         <button class="lock-btn" id="export-btn">⬇ 書き出し</button>
         <label class="lock-btn file-label" id="import-label">⬆ 読み込み
           <input type="file" id="import-input" accept="application/json" style="display:none;">
         </label>
         <button class="lock-btn" id="lock-btn">🔒 閉じる</button>
+        <button class="lock-btn" id="app-signout-btn">サインアウト</button>
       </div>
     </div>
 
@@ -222,6 +246,46 @@ const NOTEBOOK_ROW_ID = 'notebook';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let realtimeChannel = null;
+
+// ============== Supabase Auth: メールマジックリンク ==============
+let currentUser = null; // { id, email } once signed in
+
+function getRedirectUrl() {
+  return window.location.origin + window.location.pathname;
+}
+
+async function sendMagicLink(email) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: getRedirectUrl() },
+  });
+  if (error) throw error;
+}
+
+function showAuthScreen() {
+  $('#app-screen').classList.remove('active');
+  $('#login-screen').style.display = 'none';
+  $('#auth-screen').style.display = 'flex';
+  $('#auth-request-view').style.display = 'block';
+  $('#auth-sent-view').style.display = 'none';
+}
+function showPassphraseScreen() {
+  $('#auth-screen').style.display = 'none';
+  $('#app-screen').classList.remove('active');
+  $('#login-screen').style.display = 'flex';
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session && session.user) {
+    currentUser = session.user;
+    $('#auth-email-label').textContent = currentUser.email || '';
+    if (!encKey) showPassphraseScreen();
+  } else {
+    currentUser = null;
+    lock();
+    showAuthScreen();
+  }
+});
 
 // ============== crypto: パスワードから鍵を作り、AES-GCMで暗号化・復号 ==============
 const PBKDF2_ITERATIONS = 250000;
@@ -325,9 +389,10 @@ async function fetchRemoteNotebook() {
   return data;
 }
 async function pushRemoteNotebook(salt, ivB64, ciphertextB64) {
+  if (!currentUser) throw new Error('not signed in');
   const { error } = await supabase.from(NOTEBOOK_TABLE).upsert({
-    id: NOTEBOOK_ROW_ID, salt, iv: ivB64, ciphertext: ciphertextB64, updated_at: new Date().toISOString(),
-  });
+    id: NOTEBOOK_ROW_ID, user_id: currentUser.id, salt, iv: ivB64, ciphertext: ciphertextB64, updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
   if (error) throw error;
 }
 async function fetchRemoteImage(imageId) {
@@ -340,8 +405,9 @@ async function fetchRemoteImage(imageId) {
   return data;
 }
 async function pushRemoteImage(imageId, ivB64, mime, cipherB64) {
+  if (!currentUser) throw new Error('not signed in');
   const { error } = await supabase.from(IMAGES_TABLE).upsert({
-    image_id: imageId, iv: ivB64, mime, cipher_b64: cipherB64, updated_at: new Date().toISOString(),
+    image_id: imageId, user_id: currentUser.id, iv: ivB64, mime, cipher_b64: cipherB64, updated_at: new Date().toISOString(),
   });
   if (error) throw error;
 }
@@ -354,12 +420,12 @@ function subscribeRealtime() {
   if (realtimeChannel) return;
   realtimeChannel = supabase
     .channel('prompt-notebook-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: NOTEBOOK_TABLE, filter: `id=eq.${NOTEBOOK_ROW_ID}` }, async (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: NOTEBOOK_TABLE, filter: `user_id=eq.${currentUser.id}` }, async (payload) => {
       if (!encKey || !payload.new) return;
       try {
         const decrypted = await decryptJSON(payload.new.iv, payload.new.ciphertext, encKey);
         notebook = decrypted;
-        await idbPut(db, 'meta', { key: 'notebook', salt: payload.new.salt, iv: payload.new.iv, ciphertext: payload.new.ciphertext });
+        await idbPut(db, 'meta', { key: localMetaKey(), salt: payload.new.salt, iv: payload.new.iv, ciphertext: payload.new.ciphertext });
         if (currentView !== '__fav__' && currentView !== '__trash__' && !currentGenre()) {
           currentView = notebook.genres[0]?.id || '__fav__';
         }
@@ -399,17 +465,22 @@ function defaultNotebook() {
   };
 }
 
+function localMetaKey() {
+  return 'notebook:' + (currentUser ? currentUser.id : 'anon');
+}
+
 async function unlock() {
   const password = $('#password-input').value;
   const errEl = $('#login-error');
   errEl.textContent = '';
+  if (!currentUser) { errEl.textContent = 'ログインが必要です'; return; }
   if (!password) { errEl.textContent = '合言葉を入力してください'; return; }
   $('#unlock-btn').disabled = true;
   $('#unlock-btn').textContent = '開いています…';
 
   try {
     db = await openDB();
-    const localMeta = await idbGet(db, 'meta', 'notebook');
+    const localMeta = await idbGet(db, 'meta', localMetaKey());
 
     let remoteRow = null;
     try {
@@ -421,7 +492,7 @@ async function unlock() {
     if (remoteRow) {
       encKey = await deriveKey(password, remoteRow.salt);
       notebook = await decryptJSON(remoteRow.iv, remoteRow.ciphertext, encKey);
-      await idbPut(db, 'meta', { key: 'notebook', salt: remoteRow.salt, iv: remoteRow.iv, ciphertext: remoteRow.ciphertext });
+      await idbPut(db, 'meta', { key: localMetaKey(), salt: remoteRow.salt, iv: remoteRow.iv, ciphertext: remoteRow.ciphertext });
     } else if (localMeta) {
       encKey = await deriveKey(password, localMeta.salt);
       notebook = await decryptJSON(localMeta.iv, localMeta.ciphertext, encKey);
@@ -432,7 +503,7 @@ async function unlock() {
       encKey = await deriveKey(password, salt);
       notebook = defaultNotebook();
       const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
-      await idbPut(db, 'meta', { key: 'notebook', salt, iv: ivB64, ciphertext: ciphertextB64 });
+      await idbPut(db, 'meta', { key: localMetaKey(), salt, iv: ivB64, ciphertext: ciphertextB64 });
       try { await pushRemoteNotebook(salt, ivB64, ciphertextB64); }
       catch (e) { console.warn('Supabaseへの保存に失敗しました（ローカルには保存済みです）', e); }
     }
@@ -466,7 +537,7 @@ function lock() {
 
 // ---------- 書き出し・読み込み（Supabase移行時にそのまま使える形式） ----------
 async function exportNotebook() {
-  const meta = await idbGet(db, 'meta', 'notebook');
+  const meta = await idbGet(db, 'meta', localMetaKey());
   if (!meta) return;
 
   const tx = db.transaction('images', 'readonly');
@@ -507,7 +578,7 @@ async function importNotebookFile(file) {
       return;
     }
     await idbPut(db, 'meta', {
-      key: 'notebook', salt: payload.notebook.salt, iv: payload.notebook.iv, ciphertext: payload.notebook.ciphertext,
+      key: localMetaKey(), salt: payload.notebook.salt, iv: payload.notebook.iv, ciphertext: payload.notebook.ciphertext,
     });
     for (const img of (payload.images || [])) {
       await idbPut(db, 'images', { imageId: img.imageId, iv: img.iv, mime: img.mime, cipher: b64ToBuf(img.cipherB64) });
@@ -521,9 +592,9 @@ async function importNotebookFile(file) {
 }
 
 async function saveNotebook() {
-  const meta = await idbGet(db, 'meta', 'notebook');
+  const meta = await idbGet(db, 'meta', localMetaKey());
   const { ivB64, ciphertextB64 } = await encryptJSON(notebook, encKey);
-  await idbPut(db, 'meta', { key: 'notebook', salt: meta.salt, iv: ivB64, ciphertext: ciphertextB64 });
+  await idbPut(db, 'meta', { key: localMetaKey(), salt: meta.salt, iv: ivB64, ciphertext: ciphertextB64 });
   try {
     await pushRemoteNotebook(meta.salt, ivB64, ciphertextB64);
   } catch (e) {
@@ -924,6 +995,35 @@ function showUndoToast(message, onUndo) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  $('#auth-send-btn').onclick = async () => {
+    const email = $('#auth-email-input').value.trim();
+    const errEl = $('#auth-error');
+    errEl.textContent = '';
+    if (!email) { errEl.textContent = 'メールアドレスを入力してください'; return; }
+    $('#auth-send-btn').disabled = true;
+    $('#auth-send-btn').textContent = '送信中…';
+    try {
+      await sendMagicLink(email);
+      $('#auth-request-view').style.display = 'none';
+      $('#auth-sent-view').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      errEl.textContent = '送信に失敗しました。メールアドレスをご確認ください。';
+    } finally {
+      $('#auth-send-btn').disabled = false;
+      $('#auth-send-btn').textContent = 'ログイン用リンクを送る';
+    }
+  };
+  $('#auth-email-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#auth-send-btn').click(); });
+  $('#auth-resend-btn').onclick = () => {
+    $('#auth-request-view').style.display = 'block';
+    $('#auth-sent-view').style.display = 'none';
+    $('#auth-email-input').value = '';
+    $('#auth-email-input').focus();
+  };
+  $('#auth-signout-btn').onclick = () => supabase.auth.signOut();
+  $('#app-signout-btn').onclick = () => { lock(); supabase.auth.signOut(); };
+
   $('#unlock-btn').onclick = unlock;
   $('#password-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlock(); });
   $('#lock-btn').onclick = lock;

@@ -244,7 +244,36 @@ const NOTEBOOK_TABLE = 'prompt-notebook';
 const IMAGES_TABLE = 'prompt-notebook-images';
 const NOTEBOOK_ROW_ID = 'notebook';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// iOS Safariはアプリを完全終了(タスクスワイプ)すると、そのタイミングで
+// localStorageの内容を消してしまうことがある（Safariのストレージ管理の挙動によるもの）。
+// そのためSupabaseのセッションはlocalStorageではなくIndexedDBに保存し、
+// 再起動後もログイン状態が保持されるようにする。
+// (openDB/idbGet/idbPut/idbDeleteは下のIndexedDBセクションで定義。関数宣言はホイストされるため、
+//  ここから呼び出せる)
+const supabaseAuthStorage = {
+  async getItem(key) {
+    const database = await openDB();
+    const rec = await idbGet(database, 'meta', 'auth:' + key);
+    return rec ? rec.value : null;
+  },
+  async setItem(key, value) {
+    const database = await openDB();
+    await idbPut(database, 'meta', { key: 'auth:' + key, value });
+  },
+  async removeItem(key) {
+    const database = await openDB();
+    await idbDelete(database, 'meta', 'auth:' + key);
+  },
+};
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: supabaseAuthStorage,
+  },
+});
 let realtimeChannel = null;
 
 // ============== Supabase Auth: メールマジックリンク ==============

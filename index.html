@@ -56,11 +56,11 @@ textarea, input { font-family: inherit; }
 .tab-add-row button { width: 100%; border: 1px dashed var(--rule-strong); background: transparent; color: var(--ink-soft); border-radius: var(--radius); padding: 8px; font-size: 12px; }
 .tab-add-row button:hover { background: var(--paper-card); }
 
-.main { flex: 1; padding: 40px 48px; max-width: 860px; }
-.main-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
-.main-header h2 { font-family: 'Shippori Mincho', serif; font-size: 22px; margin: 0; }
-.header-actions { display: flex; align-items: center; gap: 14px; }
-.lock-btn { border: none; background: transparent; color: var(--ink-soft); font-size: 12px; text-decoration: underline; cursor: pointer; }
+.main { flex: 1; padding: 40px 48px; max-width: 860px; min-width: 0; }
+.main-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 8px 14px; }
+.main-header h2 { font-family: 'Shippori Mincho', serif; font-size: 22px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.lock-btn { border: none; background: transparent; color: var(--ink-soft); font-size: 12px; text-decoration: underline; cursor: pointer; white-space: nowrap; }
 
 .add-new-btn { display: block; width: 100%; text-align: left; background: var(--paper-card); border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 16px; margin-bottom: 28px; color: var(--ink-soft); font-size: 14px; box-shadow: var(--shadow); }
 .add-new-btn:hover { background: #f4f0e2; color: var(--ink); }
@@ -126,6 +126,10 @@ textarea, input { font-family: inherit; }
   .tab-btn { margin-right: 0; border-radius: 16px; }
   .tab-btn.active { transform: none; }
   .main { padding: 24px 18px; }
+  .main-header { gap: 6px 12px; }
+  .main-header h2 { font-size: 18px; max-width: 60vw; }
+  .header-actions { gap: 10px; }
+  #export-btn, #import-label { display: none; }
 }
 </style>
 </head>
@@ -159,7 +163,7 @@ textarea, input { font-family: inherit; }
           <input type="file" id="import-input" accept="application/json" style="display:none;">
         </label>
         <button class="lock-btn" id="lock-btn">🔒 閉じる</button>
-        <button class="lock-btn" id="forget-key-btn">🔑 この端末の記憶を消す</button>
+        <button class="lock-btn" id="forget-key-btn">🔑 記憶を消す</button>
       </div>
     </div>
 

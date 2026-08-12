@@ -244,6 +244,11 @@ const NOTEBOOK_TABLE = 'prompt-notebook';
 const IMAGES_TABLE = 'prompt-notebook-images';
 const NOTEBOOK_ROW_ID = 'notebook';
 
+// [DEBUG] iOSでのログイン保持問題を切り分けるための一時的な診断ログ。
+// 原因を特定したら DEBUG_AUTH の行ごと削除してよい。
+const DEBUG_AUTH = true;
+function authLog(...args) { if (DEBUG_AUTH) console.log('[auth-debug]', ...args); }
+
 // iOS Safariはアプリを完全終了(タスクスワイプ)すると、そのタイミングで
 // localStorageの内容を消してしまうことがある（Safariのストレージ管理の挙動によるもの）。
 // そのためSupabaseのセッションはlocalStorageではなくIndexedDBに保存し、
@@ -254,17 +259,38 @@ const supabaseAuthStorage = {
   async getItem(key) {
     const database = await openDB();
     const rec = await idbGet(database, 'meta', 'auth:' + key);
+    authLog('storage.getItem', key, '->', rec ? '(値あり, ' + rec.value.length + '文字)' : '(なし)');
     return rec ? rec.value : null;
   },
   async setItem(key, value) {
     const database = await openDB();
     await idbPut(database, 'meta', { key: 'auth:' + key, value });
+    authLog('storage.setItem', key, '(' + value.length + '文字を保存)');
   },
   async removeItem(key) {
     const database = await openDB();
     await idbDelete(database, 'meta', 'auth:' + key);
+    authLog('storage.removeItem', key);
   },
 };
+
+// supabase-jsの既定ロックはnavigator.locks（ブラウザ横断のロック）を使うが、
+// Safariではタブの強制終了時にロックが解放されずスタックし、次回起動時に
+// auth初期化(_initialize)がロック取得待ちで永久に完了しない不具合が知られている
+// (参考: supabase/supabase-js#1517, #1594, #2013, #2111)。
+// これが起きると onAuthStateChange が一度も発火せず、ログイン画面が
+// 「未ログイン判定」ではなく「初期化が終わらないまま」表示され続ける。
+// タブ内(同一JSコンテキスト内)だけで直列化する軽量ロックに差し替えることで、
+// ブラウザをまたいで残留するロックの影響を受けないようにする。
+let authLockChain = Promise.resolve();
+async function inMemoryAuthLock(name, acquireTimeout, fn) {
+  authLog('lock acquire', name);
+  const run = authLockChain.then(fn, fn);
+  authLockChain = run.then(() => {}, () => {});
+  const result = await run;
+  authLog('lock release', name);
+  return result;
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -272,9 +298,30 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: supabaseAuthStorage,
+    lock: inMemoryAuthLock,
   },
 });
 let realtimeChannel = null;
+
+// [DEBUG] onAuthStateChangeが一定時間経っても一度も発火しない場合、
+// initializeがロック待ちなどでスタックしている可能性が高い。
+// その場合はIndexedDBの生データを直接ダンプして、
+// 「データ自体が消えている」のか「読み込み処理が進んでいない」のかを切り分ける。
+let authStateFired = false;
+if (DEBUG_AUTH) {
+  setTimeout(async () => {
+    if (authStateFired) return;
+    console.warn('[auth-debug] onAuthStateChangeが4秒経っても発火していません。auth初期化がスタックしている疑いがあります。IndexedDBの生データ:');
+    try {
+      const database = await openDB();
+      const tx = database.transaction('meta', 'readonly');
+      const req = tx.objectStore('meta').getAllKeys();
+      req.onsuccess = () => console.warn('[auth-debug] metaストアの全キー:', req.result);
+    } catch (e) {
+      console.warn('[auth-debug] IndexedDBの読み取り自体に失敗:', e);
+    }
+  }, 4000);
+}
 
 // ============== Supabase Auth: メールマジックリンク ==============
 let currentUser = null; // { id, email } once signed in
@@ -305,6 +352,8 @@ function showPassphraseScreen() {
 }
 
 supabase.auth.onAuthStateChange((_event, session) => {
+  authStateFired = true;
+  authLog('onAuthStateChange', _event, session ? 'session あり (user=' + session.user?.id + ')' : 'session なし');
   if (session && session.user) {
     currentUser = session.user;
     $('#auth-email-label').textContent = currentUser.email || '';

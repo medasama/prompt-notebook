@@ -90,6 +90,9 @@ textarea, input { font-family: inherit; }
 .editor-panel.drag-over { outline: 2px dashed var(--accent-business); outline-offset: -2px; }
 .editor-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 #editor-title { flex: 1; font-size: 20px; font-family: 'Shippori Mincho', serif; border: none; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; background: transparent; outline: none; }
+#editor-fav-btn { border: none; background: transparent; font-size: 22px; color: var(--ink-soft); line-height: 1; padding: 4px 6px; cursor: pointer; }
+#editor-fav-btn:hover { color: var(--ink); }
+#editor-fav-btn.active { color: var(--gold); }
 #editor-close-btn { border: none; background: transparent; font-size: 20px; color: var(--ink-soft); line-height: 1; padding: 4px 8px; }
 #editor-close-btn:hover { color: var(--ink); }
 #editor-text { flex: 1; width: 100%; border: none; resize: none; font-size: 18px; line-height: 1.9; outline: none; background: transparent; }
@@ -178,6 +181,7 @@ textarea, input { font-family: inherit; }
   <div class="editor-panel" id="editor-panel">
     <div class="editor-topbar">
       <input type="text" id="editor-title" placeholder="タイトル（任意）">
+      <button id="editor-fav-btn" title="お気に入り">☆</button>
       <button id="editor-close-btn">✕</button>
     </div>
     <textarea id="editor-text" placeholder="プロンプトを入力…"></textarea>
@@ -718,13 +722,11 @@ function renderCard(p) {
   };
   actions.appendChild(copyBtn);
 
-  if (g && g.hasImage) {
-    const starBtn = document.createElement('button');
-    starBtn.className = 'icon-btn star' + (p.favorite ? ' active' : '');
-    starBtn.textContent = p.favorite ? '★ お気に入り' : '☆ お気に入り';
-    starBtn.onclick = async (e) => { e.stopPropagation(); p.favorite = !p.favorite; await saveNotebook(); renderView(); };
-    actions.appendChild(starBtn);
-  }
+  const starBtn = document.createElement('button');
+  starBtn.className = 'icon-btn star' + (p.favorite ? ' active' : '');
+  starBtn.textContent = p.favorite ? '★ お気に入り' : '☆ お気に入り';
+  starBtn.onclick = async (e) => { e.stopPropagation(); p.favorite = !p.favorite; await saveNotebook(); renderView(); };
+  actions.appendChild(starBtn);
 
   const spacer = document.createElement('span');
   spacer.className = 'card-meta-spacer';
@@ -866,12 +868,21 @@ let editingPromptId = null;
 let editorOriginalSnapshot = null;
 let editorHasImageGenre = false;
 let editorRemoveImage = false;
+let editorFavorite = false;
+
+function updateEditorFavBtn() {
+  const btn = $('#editor-fav-btn');
+  btn.textContent = editorFavorite ? '★' : '☆';
+  btn.classList.toggle('active', editorFavorite);
+}
 
 function openEditor(p) {
   editingPromptId = p ? p.id : null;
   const g = p ? genreOf(p) : currentGenre();
   editorHasImageGenre = !!(g && g.hasImage);
   editorRemoveImage = false;
+  editorFavorite = p ? !!p.favorite : false;
+  updateEditorFavBtn();
   clearPendingImage();
 
   $('#editor-title').value = p ? (p.title || '') : '';
@@ -902,7 +913,7 @@ async function closeEditorSave() {
     const g = currentGenre();
     if (!g) { closeEditorUI(); return; }
     const p = {
-      id: uid(), genreId: g.id, title, text, favorite: false, trashed: false,
+      id: uid(), genreId: g.id, title, text, favorite: editorFavorite, trashed: false,
       imageId: null, imageIv: null, imageMime: null,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
@@ -917,7 +928,7 @@ async function closeEditorSave() {
     if (p) {
       const changed = (p.title || '') !== title || p.text !== text;
       if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
-      p.title = title; p.text = text; p.updatedAt = new Date().toISOString();
+      p.title = title; p.text = text; p.favorite = editorFavorite; p.updatedAt = new Date().toISOString();
 
       if (editorRemoveImage && p.imageId) {
         await deleteImage(p);
@@ -1000,6 +1011,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#genre-cancel-btn').onclick = closeGenreDialog;
   $('#genre-confirm-btn').onclick = confirmAddGenre;
   $('#image-modal').onclick = () => $('#image-modal').classList.remove('active');
+
+  $('#editor-fav-btn').onclick = () => { editorFavorite = !editorFavorite; updateEditorFavBtn(); };
 
   // 編集ポップアップ：閉じる操作＝自動保存
   $('#editor-close-btn').onclick = () => closeEditorSave();

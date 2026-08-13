@@ -47,7 +47,7 @@ textarea, input { font-family: inherit; }
 .spiral span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rule-strong); background: var(--paper); }
 
 .tabs { width: 168px; flex-shrink: 0; padding: 78px 0 20px; display: flex; flex-direction: column; gap: 6px; }
-.tab-btn { border: none; padding: 9px 14px; text-align: left; font-size: 13px; font-weight: 500; color: #fff; border-radius: 0 20px 20px 0; margin-right: 14px; box-shadow: var(--shadow); opacity: 0.72; transition: opacity 0.15s, transform 0.15s; }
+.tab-btn { border: none; padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 500; color: #fff; border-radius: 0 20px 20px 0; margin-right: 14px; box-shadow: var(--shadow); opacity: 0.72; transition: opacity 0.15s, transform 0.15s; }
 .tab-btn:hover { opacity: 0.9; transform: translateX(2px); }
 .tab-btn.active { opacity: 1; margin-right: 0; transform: translateX(0); }
 .tab-btn.trash-tab { background: var(--ink-soft) !important; margin-top: 18px; }
@@ -65,16 +65,16 @@ textarea, input { font-family: inherit; }
 .add-new-btn { display: block; width: 100%; text-align: left; background: var(--paper-card); border: 1px dashed var(--rule-strong); border-radius: var(--radius); padding: 16px; margin-bottom: 28px; color: var(--ink-soft); font-size: 14px; box-shadow: var(--shadow); }
 .add-new-btn:hover { background: #f4f0e2; color: var(--ink); }
 
-.prompt-card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; box-shadow: var(--shadow); position: relative; }
-.prompt-card .card-body { display: flex; gap: 10px; cursor: pointer; }
-.prompt-card .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule-strong); cursor: zoom-in; flex-shrink: 0; }
+.prompt-card { background: var(--paper-card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--shadow); position: relative; }
+.prompt-card .card-body { display: flex; gap: 12px; cursor: pointer; }
+.prompt-card .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule-strong); cursor: zoom-in; flex-shrink: 0; }
 .card-text { flex: 1; min-width: 0; }
-.card-title { font-weight: 700; font-size: 13.5px; margin-bottom: 2px; }
+.card-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
 .card-title.placeholder { color: var(--ink-soft); font-weight: 500; }
-.card-preview { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
-.card-date { font-size: 10.5px; color: var(--ink-soft); }
-.prompt-card .card-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11.5px; color: var(--ink-soft); flex-wrap: wrap; }
-.icon-btn { border: none; background: transparent; font-size: 12px; color: var(--ink-soft); padding: 3px 5px; border-radius: var(--radius); }
+.card-preview { font-size: 13px; color: var(--ink-soft); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.card-date { font-size: 11px; color: var(--ink-soft); }
+.prompt-card .card-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.icon-btn { border: none; background: transparent; font-size: 13px; color: var(--ink-soft); padding: 4px 6px; border-radius: var(--radius); }
 .icon-btn:hover { background: var(--paper); color: var(--ink); }
 .icon-btn.star.active { color: var(--gold); }
 .icon-btn.copy-flash { color: #3f6b52; }
@@ -90,9 +90,6 @@ textarea, input { font-family: inherit; }
 .editor-panel.drag-over { outline: 2px dashed var(--accent-business); outline-offset: -2px; }
 .editor-topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 #editor-title { flex: 1; min-width: 0; font-size: 20px; font-family: 'Shippori Mincho', serif; border: none; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; background: transparent; outline: none; }
-#editor-copy-btn { flex-shrink: 0; border: none; background: transparent; font-size: 18px; color: var(--ink-soft); line-height: 1; padding: 4px 6px; cursor: pointer; border-radius: var(--radius); }
-#editor-copy-btn:hover { color: var(--ink); background: var(--paper); }
-#editor-copy-btn.copy-flash { color: #3f6b52; }
 #editor-fav-btn { flex-shrink: 0; border: none; background: transparent; font-size: 22px; color: var(--ink-soft); line-height: 1; padding: 4px 6px; cursor: pointer; }
 #editor-fav-btn:hover { color: var(--ink); }
 #editor-fav-btn.active { color: var(--gold); }
@@ -102,7 +99,7 @@ textarea, input { font-family: inherit; }
 .editor-image-area { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 14px; flex-shrink: 0; }
 .paste-hint { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
 .pending-image-preview { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: var(--paper); border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 6px 8px; }
-.pending-image-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius); cursor: zoom-in; }
+.pending-image-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius); }
 .pending-image-preview span { font-size: 12px; color: var(--ink-soft); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pending-image-preview button { border: none; background: transparent; color: var(--danger); font-size: 13px; }
 .file-label { font-size: 12px; color: var(--ink-soft); cursor: pointer; }
@@ -110,7 +107,7 @@ textarea, input { font-family: inherit; }
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow); z-index: 50; }
 .toast button { border: none; background: transparent; color: var(--gold); text-decoration: underline; font-size: 13px; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.82); display: none; align-items: center; justify-content: center; z-index: 300; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.82); display: none; align-items: center; justify-content: center; z-index: 100; }
 .modal-overlay.active { display: flex; }
 .modal-overlay img { max-width: 88vw; max-height: 88vh; border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
 
@@ -128,38 +125,14 @@ textarea, input { font-family: inherit; }
 @media (max-width: 720px) {
   #app-screen.active { flex-direction: column; }
   .spiral { display: none; }
-
-  /* タブ行：折り返し大型ピル→横スクロールの小型チップに */
-  .tabs {
-    width: 100%; flex-direction: row; flex-wrap: nowrap; flex-shrink: 0;
-    padding: 12px 12px; gap: 6px;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab-btn {
-    margin-right: 0; flex-shrink: 0;
-    padding: 6px 12px; font-size: 12px; border-radius: 14px;
-  }
+  .tabs { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 16px 12px 0; }
+  .tab-btn { margin-right: 0; border-radius: 16px; }
   .tab-btn.active { transform: none; }
-  .tab-btn.trash-tab { margin-top: 0; }
-  .tab-add-row { padding: 0; flex-shrink: 0; }
-  .tab-add-row button { white-space: nowrap; padding: 6px 10px; font-size: 11px; }
-
-  .main { padding: 16px 14px; }
-  .main-header { margin-bottom: 14px; gap: 4px 10px; }
-  .main-header h2 { font-size: 16px; max-width: 60vw; }
-  .header-actions { gap: 8px; }
+  .main { padding: 24px 18px; }
+  .main-header { gap: 6px 12px; }
+  .main-header h2 { font-size: 18px; max-width: 60vw; }
+  .header-actions { gap: 10px; }
   #export-btn, #import-label { display: none; }
-
-  .add-new-btn { padding: 10px 12px; margin-bottom: 14px; font-size: 13px; }
-
-  /* カードをさらに詰める */
-  .prompt-card { padding: 8px 12px; margin-bottom: 6px; }
-  .prompt-card .thumb { width: 38px; height: 38px; }
-  .card-title { font-size: 13px; }
-  .card-preview { font-size: 12px; -webkit-line-clamp: 1; }
-  .prompt-card .card-actions { margin-top: 4px; gap: 6px; font-size: 11px; }
 }
 </style>
 </head>
@@ -208,7 +181,6 @@ textarea, input { font-family: inherit; }
   <div class="editor-panel" id="editor-panel">
     <div class="editor-topbar">
       <input type="text" id="editor-title" placeholder="タイトル（任意）">
-      <button id="editor-copy-btn" title="コピー">📋</button>
       <button id="editor-fav-btn" title="お気に入り">☆</button>
       <button id="editor-close-btn">✕</button>
     </div>
@@ -666,7 +638,6 @@ function renderView() {
   list.innerHTML = '';
 
   let items = [];
-  let dateOnlySort = false;
   if (currentView === '__trash__') {
     titleEl.textContent = 'ゴミ箱';
     addBtn.style.display = 'none';
@@ -680,19 +651,11 @@ function renderView() {
     titleEl.textContent = g ? g.name : '';
     addBtn.style.display = 'block';
     items = notebook.prompts.filter((p) => p.genreId === currentView && !p.trashed);
-    dateOnlySort = !!(g && g.hasImage);
   }
 
-  const key = dateOnlySort ? (p) => (p.updatedAt || '') : sortKey;
-  items.sort((a, b) => key(b).localeCompare(key(a)));
+  items.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   $('#empty-state').style.display = items.length ? 'none' : 'block';
   items.forEach((p) => list.appendChild(renderCard(p)));
-}
-
-function sortKey(p) {
-  const u = p.updatedAt || '';
-  const c = p.lastCopiedAt || '';
-  return c > u ? c : u;
 }
 
 function formatDate(iso) {
@@ -753,11 +716,9 @@ function renderCard(p) {
   copyBtn.onclick = async (e) => {
     e.stopPropagation();
     await navigator.clipboard.writeText(p.text);
-    p.lastCopiedAt = new Date().toISOString();
-    await saveNotebook();
     copyBtn.textContent = '✓ コピーしました';
     copyBtn.classList.add('copy-flash');
-    setTimeout(() => { renderView(); }, 1500);
+    setTimeout(() => { copyBtn.textContent = '📋 コピー'; copyBtn.classList.remove('copy-flash'); }, 1500);
   };
   actions.appendChild(copyBtn);
 
@@ -943,55 +904,46 @@ function openEditor(p) {
   setTimeout(() => $('#editor-text').focus(), 50);
 }
 
-let editorSaveInFlight = false;
-
 async function closeEditorSave() {
-  if (editorSaveInFlight) return;
-  if (!$('#editor-overlay').classList.contains('active')) return;
-  editorSaveInFlight = true;
-  try {
-    const title = $('#editor-title').value.trim();
-    const text = $('#editor-text').value.trim();
+  const title = $('#editor-title').value.trim();
+  const text = $('#editor-text').value.trim();
 
-    if (!editingPromptId) {
-      if (!text) { closeEditorUI(); return; }
-      const g = currentGenre();
-      if (!g) { closeEditorUI(); return; }
-      const p = {
-        id: uid(), genreId: g.id, title, text, favorite: editorFavorite, trashed: false,
-        imageId: null, imageIv: null, imageMime: null,
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      };
-      if (g.hasImage && pendingImageFile) {
+  if (!editingPromptId) {
+    if (!text) { closeEditorUI(); return; }
+    const g = currentGenre();
+    if (!g) { closeEditorUI(); return; }
+    const p = {
+      id: uid(), genreId: g.id, title, text, favorite: editorFavorite, trashed: false,
+      imageId: null, imageIv: null, imageMime: null,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    };
+    if (g.hasImage && pendingImageFile) {
+      const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
+      p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
+    }
+    notebook.prompts.push(p);
+    await saveNotebook();
+  } else {
+    const p = notebook.prompts.find((x) => x.id === editingPromptId);
+    if (p) {
+      const changed = (p.title || '') !== title || p.text !== text;
+      if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
+      p.title = title; p.text = text; p.favorite = editorFavorite; p.updatedAt = new Date().toISOString();
+
+      if (editorRemoveImage && p.imageId) {
+        await deleteImage(p);
+        p.imageId = null; p.imageIv = null; p.imageMime = null;
+      } else if (pendingImageFile) {
+        if (p.imageId) await deleteImage(p);
         const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
         p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
       }
-      notebook.prompts.push(p);
       await saveNotebook();
-    } else {
-      const p = notebook.prompts.find((x) => x.id === editingPromptId);
-      if (p) {
-        const changed = (p.title || '') !== title || p.text !== text;
-        if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
-        p.title = title; p.text = text; p.favorite = editorFavorite; p.updatedAt = new Date().toISOString();
-
-        if (editorRemoveImage && p.imageId) {
-          await deleteImage(p);
-          p.imageId = null; p.imageIv = null; p.imageMime = null;
-        } else if (pendingImageFile) {
-          if (p.imageId) await deleteImage(p);
-          const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
-          p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
-        }
-        await saveNotebook();
-      }
     }
-
-    closeEditorUI();
-    renderView();
-  } finally {
-    editorSaveInFlight = false;
   }
+
+  closeEditorUI();
+  renderView();
 }
 
 function closeEditorDiscard() {
@@ -1061,17 +1013,6 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#image-modal').onclick = () => $('#image-modal').classList.remove('active');
 
   $('#editor-fav-btn').onclick = () => { editorFavorite = !editorFavorite; updateEditorFavBtn(); };
-  $('#editor-copy-btn').onclick = async () => {
-    const btn = $('#editor-copy-btn');
-    await navigator.clipboard.writeText($('#editor-text').value);
-    if (editingPromptId) {
-      const p = notebook.prompts.find((x) => x.id === editingPromptId);
-      if (p) { p.lastCopiedAt = new Date().toISOString(); await saveNotebook(); }
-    }
-    btn.textContent = '✓';
-    btn.classList.add('copy-flash');
-    setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copy-flash'); }, 1500);
-  };
 
   // 編集ポップアップ：閉じる操作＝自動保存
   $('#editor-close-btn').onclick = () => closeEditorSave();
@@ -1087,11 +1028,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.target.files && e.target.files[0]) setPendingImage(e.target.files[0]);
   });
   $('#pending-image-remove').onclick = removeEditorImage;
-  $('#pending-image-thumb').onclick = (e) => {
-    e.stopPropagation();
-    const src = $('#pending-image-thumb').src;
-    if (src) openImageModal(src);
-  };
 
   // 画像：ドラッグ＆ドロップ（編集パネル内、画像対応ジャンルのときのみ）
   const editorPanel = $('#editor-panel');
@@ -1122,21 +1058,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-  // 本文を範囲選択すると、コピペしなくてもその文字列をタイトルに反映
-  const applySelectionToTitle = () => {
-    const ta = $('#editor-text');
-    const start = ta.selectionStart, end = ta.selectionEnd;
-    if (end <= start) return;
-    let sel = ta.value.slice(start, end).replace(/\s+/g, ' ').trim();
-    if (!sel) return;
-    if (sel.length > 60) sel = sel.slice(0, 60) + '…';
-    $('#editor-title').value = sel;
-  };
-  $('#editor-text').addEventListener('select', applySelectionToTitle);
-  $('#editor-text').addEventListener('mouseup', applySelectionToTitle);
-  $('#editor-text').addEventListener('touchend', applySelectionToTitle);
-  $('#editor-text').addEventListener('keyup', (e) => { if (e.shiftKey) applySelectionToTitle(); });
 });
 </script>
 </body>

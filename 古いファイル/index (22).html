@@ -102,7 +102,7 @@ textarea, input { font-family: inherit; }
 .editor-image-area { margin-top: 14px; border-top: 1px solid var(--rule); padding-top: 14px; flex-shrink: 0; }
 .paste-hint { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
 .pending-image-preview { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: var(--paper); border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 6px 8px; }
-.pending-image-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius); cursor: zoom-in; }
+.pending-image-preview img { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius); }
 .pending-image-preview span { font-size: 12px; color: var(--ink-soft); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pending-image-preview button { border: none; background: transparent; color: var(--danger); font-size: 13px; }
 .file-label { font-size: 12px; color: var(--ink-soft); cursor: pointer; }
@@ -110,7 +110,7 @@ textarea, input { font-family: inherit; }
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow); z-index: 50; }
 .toast button { border: none; background: transparent; color: var(--gold); text-decoration: underline; font-size: 13px; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.82); display: none; align-items: center; justify-content: center; z-index: 300; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(46, 42, 36, 0.82); display: none; align-items: center; justify-content: center; z-index: 100; }
 .modal-overlay.active { display: flex; }
 .modal-overlay img { max-width: 88vw; max-height: 88vh; border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
 
@@ -666,7 +666,6 @@ function renderView() {
   list.innerHTML = '';
 
   let items = [];
-  let dateOnlySort = false;
   if (currentView === '__trash__') {
     titleEl.textContent = 'ゴミ箱';
     addBtn.style.display = 'none';
@@ -680,11 +679,9 @@ function renderView() {
     titleEl.textContent = g ? g.name : '';
     addBtn.style.display = 'block';
     items = notebook.prompts.filter((p) => p.genreId === currentView && !p.trashed);
-    dateOnlySort = !!(g && g.hasImage);
   }
 
-  const key = dateOnlySort ? (p) => (p.updatedAt || '') : sortKey;
-  items.sort((a, b) => key(b).localeCompare(key(a)));
+  items.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   $('#empty-state').style.display = items.length ? 'none' : 'block';
   items.forEach((p) => list.appendChild(renderCard(p)));
 }
@@ -943,55 +940,46 @@ function openEditor(p) {
   setTimeout(() => $('#editor-text').focus(), 50);
 }
 
-let editorSaveInFlight = false;
-
 async function closeEditorSave() {
-  if (editorSaveInFlight) return;
-  if (!$('#editor-overlay').classList.contains('active')) return;
-  editorSaveInFlight = true;
-  try {
-    const title = $('#editor-title').value.trim();
-    const text = $('#editor-text').value.trim();
+  const title = $('#editor-title').value.trim();
+  const text = $('#editor-text').value.trim();
 
-    if (!editingPromptId) {
-      if (!text) { closeEditorUI(); return; }
-      const g = currentGenre();
-      if (!g) { closeEditorUI(); return; }
-      const p = {
-        id: uid(), genreId: g.id, title, text, favorite: editorFavorite, trashed: false,
-        imageId: null, imageIv: null, imageMime: null,
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      };
-      if (g.hasImage && pendingImageFile) {
+  if (!editingPromptId) {
+    if (!text) { closeEditorUI(); return; }
+    const g = currentGenre();
+    if (!g) { closeEditorUI(); return; }
+    const p = {
+      id: uid(), genreId: g.id, title, text, favorite: editorFavorite, trashed: false,
+      imageId: null, imageIv: null, imageMime: null,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    };
+    if (g.hasImage && pendingImageFile) {
+      const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
+      p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
+    }
+    notebook.prompts.push(p);
+    await saveNotebook();
+  } else {
+    const p = notebook.prompts.find((x) => x.id === editingPromptId);
+    if (p) {
+      const changed = (p.title || '') !== title || p.text !== text;
+      if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
+      p.title = title; p.text = text; p.favorite = editorFavorite; p.updatedAt = new Date().toISOString();
+
+      if (editorRemoveImage && p.imageId) {
+        await deleteImage(p);
+        p.imageId = null; p.imageIv = null; p.imageMime = null;
+      } else if (pendingImageFile) {
+        if (p.imageId) await deleteImage(p);
         const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
         p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
       }
-      notebook.prompts.push(p);
       await saveNotebook();
-    } else {
-      const p = notebook.prompts.find((x) => x.id === editingPromptId);
-      if (p) {
-        const changed = (p.title || '') !== title || p.text !== text;
-        if (changed && editorOriginalSnapshot) editUndoMap.set(p.id, editorOriginalSnapshot);
-        p.title = title; p.text = text; p.favorite = editorFavorite; p.updatedAt = new Date().toISOString();
-
-        if (editorRemoveImage && p.imageId) {
-          await deleteImage(p);
-          p.imageId = null; p.imageIv = null; p.imageMime = null;
-        } else if (pendingImageFile) {
-          if (p.imageId) await deleteImage(p);
-          const { imageId, imageIv, imageMime } = await uploadImage(pendingImageFile);
-          p.imageId = imageId; p.imageIv = imageIv; p.imageMime = imageMime;
-        }
-        await saveNotebook();
-      }
     }
-
-    closeEditorUI();
-    renderView();
-  } finally {
-    editorSaveInFlight = false;
   }
+
+  closeEditorUI();
+  renderView();
 }
 
 function closeEditorDiscard() {
@@ -1087,11 +1075,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.target.files && e.target.files[0]) setPendingImage(e.target.files[0]);
   });
   $('#pending-image-remove').onclick = removeEditorImage;
-  $('#pending-image-thumb').onclick = (e) => {
-    e.stopPropagation();
-    const src = $('#pending-image-thumb').src;
-    if (src) openImageModal(src);
-  };
 
   // 画像：ドラッグ＆ドロップ（編集パネル内、画像対応ジャンルのときのみ）
   const editorPanel = $('#editor-panel');
@@ -1122,21 +1105,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-  // 本文を範囲選択すると、コピペしなくてもその文字列をタイトルに反映
-  const applySelectionToTitle = () => {
-    const ta = $('#editor-text');
-    const start = ta.selectionStart, end = ta.selectionEnd;
-    if (end <= start) return;
-    let sel = ta.value.slice(start, end).replace(/\s+/g, ' ').trim();
-    if (!sel) return;
-    if (sel.length > 60) sel = sel.slice(0, 60) + '…';
-    $('#editor-title').value = sel;
-  };
-  $('#editor-text').addEventListener('select', applySelectionToTitle);
-  $('#editor-text').addEventListener('mouseup', applySelectionToTitle);
-  $('#editor-text').addEventListener('touchend', applySelectionToTitle);
-  $('#editor-text').addEventListener('keyup', (e) => { if (e.shiftKey) applySelectionToTitle(); });
 });
 </script>
 </body>
